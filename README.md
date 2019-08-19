@@ -10,4 +10,6 @@ The SNEMI3D dataset was published in the context of the IEEE International Sympo
 
 As illustrated in following Figure ....
 
-![Result](documentation/part.PNG)
+[[documentation/part.png]]
+
+test
