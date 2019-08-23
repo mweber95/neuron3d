@@ -1,6 +1,22 @@
 # Deep learning for dense reconstruction of neurons from electron microscopic images
 
-*Note:* This repository is a subproject of https://github.com/tbullmann. Prerequisites, requirements, and an easy "How to get started" guide is available under https://github.com/tbullmann/heuhaufen.
+*Note:* This repository is a subproject of https://github.com/tbullmann/heuhaufen.
+
+### Prerequisites
+- Windows, Linux or OSX (following getting started guide for unix users)
+- Python3
+- CPU or NVIDIA GPU + CUDA CuDNN (for instructions see here https://github.com/tbullmann/heuhaufen/blob/master/CONDA.md)
+
+### Requirements
+- Argparse 1.4.0 
+- Tifffile 2019.1.30
+- Pillow 5.4.1
+- Scipy 1.2.0
+- Imageio 2.4.1
+- Skimage 0.14.2
+- Neuroglancer 1.0.11 (https://github.com/google/neuroglancer)
+
+- Tornado 4.5.3 (*Note:* Make sure you installed the specified version for Tornado)
 
 ## SNEMI3D dataset
 
