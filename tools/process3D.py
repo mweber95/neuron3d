@@ -12,97 +12,29 @@ from skimage.morphology import skeletonize
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--operation", required=True, help="operation to be executed",
-                    choices=["create_em", "create_overlap", "create_consecutive", "create_membrane",
-                             "create_membrane_tif",  "create_cytoplasma", "preprocessing", "split",
-                             "preprocessing_membrane", "create_rgb", "dilation", "cutten", "cutten2", "single",
-                             "erosion"])
-parser.add_argument("--input_dir", required=True, help="path to folder containing images")
-parser.add_argument("--output_dir", required=True, help="output path")
-parser.add_argument("--split", choices=["em", "label"], help="select em or label stack")
+                    choices=["split", "cytoplasm", "membrane", "overlap", "consecutive", "eroskele",
+                             "tif_to_png", "png_to_tif"])
+parser.add_argument("--input_dir", required=True, help="path to folder containing tif file")
+parser.add_argument("--output_dir", required=True, help="path to output folder")
+parser.add_argument("--split", required=False, choices=["em", "label"], help="select em or label stack")
+parser.add_argument("--size", required=False, default=512, help="image width and height")
+parser.add_argument("--name", required=False, help="name for the output tif file")
 
 a = parser.parse_args()
 
 
-def erosion():
-    all_files = glob.glob(os.path.join(a.input_dir, '*.png'))
-    list_files = []
+def split_snemi3d(input, output, prefix):
 
-    print(all_files)
-    for file in all_files:
-        file_as_array = imread(file)
-        file_as_array[file_as_array < 127] = 0
-        file_as_array[file_as_array >= 127] = 1
-        try:
-            file_as_array = file_as_array[:, :, 0]
-        except:
-            file_as_array = file_as_array[:, :]
-        list_files.append(file_as_array)
+    stack = tifread(input)
+    os.chdir(output)
 
-    resulting_array = np.asarray(list_files)
-    os.chdir(a.output_dir)
-    for i, slice in enumerate(resulting_array):
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = binary_erosion(slice)
-        slice = skeletonize(slice)
-        pictures = Image.fromarray(slice.astype('uint8') * 255)
-        pictures.save('%02d.png' % i)
-        print(str(i + 1) + "/" + str(len(resulting_array)) + " files created")
-
-
-def single():
-
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-
-    for i, slice in enumerate(stack):
-        pictures = Image.fromarray(slice.astype('uint8'))
-        pictures.save('%02d.png' % i)
-        print(str(i + 1) + "/" + str(len(stack)) + " files created")
-
-
-def cutten():
-
-    input = a.input_dir
-    all_files = glob.glob(os.path.join(input, '*.png'))
-    list_files = []
-    print(all_files)
-    for file in all_files:
-        file_as_array = imread(file)
-        list_files.append(file_as_array)
-
-    resulting_array = np.asarray(list_files)
-    os.chdir(a.output_dir)
-    tifsave('cyto_a.tif', resulting_array)
-
-
-def cutten2():
-
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-    #stack = stack[:, 1:, 1:]
-    #stack = stack[:, :-1, 1:]
-    #stack = stack[:, :-1, :-1]
-    stack = stack[:, 1:, :-1]
-
-    tifsave('overlap_d.tif', stack)
-
-
-def split_snemi3d(prefix):
-
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-    stack_split_c = stack[:, :512, :512]
-    stack_split_b = stack[:, :512, 512:]
-    stack_split_d = stack[:, 512:, :512]
+    'slicing original image stack'
     stack_split_a = stack[:, 512:, 512:]
+    stack_split_b = stack[:, :512, 512:]
+    stack_split_c = stack[:, :512, :512]
+    stack_split_d = stack[:, 512:, :512]
+
+    'saving all four split image stacks'
     tifsave('%s_a.tif' % prefix, stack_split_a)
     tifsave('%s_b.tif' % prefix, stack_split_b)
     tifsave('%s_c.tif' % prefix, stack_split_c)
@@ -117,7 +49,7 @@ def edges(slice):
     - this function "edges" is needed for creating overlap images, cytoplasma images, membrane_single_pictures and
     membrane_tif_stack
     :param slice: one slice from image stack
-    :return: boolean array with membranes labeled True
+    :return: boolean array with membranes labeled true
     """
     edges_min = ndimage.generic_filter(slice, function=min, size=(3, 3))
     edges_max = ndimage.generic_filter(slice, function=max, size=(3, 3))
@@ -125,40 +57,35 @@ def edges(slice):
     return edges_compared
 
 
-def membrane_single_pictures2():
-    """
-    - creating single EM pictures from train-input.tif for cytoplasma training
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
+def cytoplasm(input, output):
+
+    stack = tifread(input)
+    os.chdir(output)
 
     for i, slice in enumerate(stack):
-        pictures = Image.fromarray(slice.astype('uint8'))
+        edges_compared = edges(slice)
+        cytoplasm_logical = np.logical_and(np.logical_not(edges_compared), slice > 0)
+        pictures = Image.fromarray(cytoplasm_logical.astype('uint8') * 255)
         pictures.save('%02d.png' % i)
         print(str(i + 1) + "/" + str(len(stack)) + " files created")
 
 
-def em():
-    """
-    - creating single EM pictures from train-input.tif for cytoplasma training
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
+def membrane(input, output):
+
+    stack = tifread(input)
+    os.chdir(output)
 
     for i, slice in enumerate(stack):
-        pictures = Image.fromarray(slice)
+        edges_compared = edges(slice)
+        pictures = Image.fromarray(edges_compared.astype('uint8') * 255)
         pictures.save('%02d.png' % i)
         print(str(i + 1) + "/" + str(len(stack)) + " files created")
 
 
-def overlap():
-    """
-    - creating single overlap images from train-labels.tif for overlap training
-    - to ensure exact distinction and segmentation of overlap labels, the membrane of each object needs to be subtracted
-    from the overlap
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
+def overlap(input, output):
+
+    stack = tifread(input)
+    os.chdir(output)
     list_for_slices = []
 
     for i, slice in enumerate(stack):
@@ -167,10 +94,10 @@ def overlap():
         print(str(i + 1) + "/" + str(len(stack)) + " membrane pictures for overlap detection processed")
 
     membranes = np.asarray(list_for_slices)
-    new_stack = membranes * stack
+    membranes_indices = membranes * stack
 
-    stack1 = new_stack[:-1]
-    stack2 = new_stack[1:]
+    stack1 = membranes_indices[:-1]
+    stack2 = membranes_indices[1:]
     compared_stack = np.logical_and(np.logical_and(stack1 == stack2, stack1 > 0), stack2 > 0)
 
     for i, slice in enumerate(compared_stack):
@@ -180,23 +107,19 @@ def overlap():
         print(str(i + 1) + "/" + str(len(compared_stack)) + " files created")
 
 
-def consecutive():
-    """
-    - consecutive images are required for training with overlap images
-    - picture i and picture i+1 are added to the red and green channel
-    - transpose function is needed for the correct 3D arrangement of the .tif image stack
-    """
-    stack = tifread(a.input_dir)
-    try:
+def consecutive(input, output, size):
+
+    stack = tifread(input)
+    os.chdir(output)
+
+    if len(stack.shape) == 4:
         stack = stack[:, :, :, 0]
-    except:
-        stack = stack[:, :, :]
-    os.chdir(a.output_dir)
+
     stack1 = stack[:-1]
     stack2 = stack[1:]
 
     for i, (slice1, slice2) in enumerate(zip(stack1, stack2)):
-        zero_array = np.zeros((3, 512, 512))
+        zero_array = np.zeros((3, int(size), int(size)))
         zero_array[0] = slice1
         zero_array[1] = slice2
         zero_array = np.ascontiguousarray(zero_array.transpose(1, 2, 0))
@@ -208,79 +131,60 @@ def consecutive():
         print(str(i + 1) + "/" + str(len(stack1)) + " files created")
 
 
-def membrane_single_pictures():
-    """
-    - creating single membrane pictures for cytoplasma prediction
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
+def eroskele(input, output):
+
+    list_files = []
+
+    for file in input:
+        file_as_array = imread(file)
+        file_as_array[file_as_array < 127] = 0
+        file_as_array[file_as_array >= 127] = 1
+        try:
+            file_as_array = file_as_array[:, :, 0]
+        except:
+            file_as_array = file_as_array[:, :]
+        list_files.append(file_as_array)
+
+    resulting_array = np.asarray(list_files)
+
+    os.chdir(output)
+
+    for i, slice in enumerate(resulting_array):
+
+        slice = binary_erosion(slice)   #1
+        slice = binary_erosion(slice)   #2
+        slice = binary_erosion(slice)   #3
+        slice = binary_erosion(slice)   #4
+        slice = binary_erosion(slice)   #5
+        slice = binary_erosion(slice)   #6
+        slice = binary_erosion(slice)   #7
+        slice = binary_erosion(slice)   #8
+        slice = binary_erosion(slice)   #9
+        slice = binary_erosion(slice)   #10
+        slice = skeletonize(slice)
+
+        pictures = Image.fromarray(slice.astype('uint8') * 255)
+        pictures.save('%02d.png' % i)
+        print(str(i + 1) + "/" + str(len(resulting_array)) + " files created")
+
+
+def tif_to_png(input, output):
+
+    stack = tifread(input)
+    os.chdir(output)
 
     for i, slice in enumerate(stack):
-        edges_compared = edges(slice)
-        pictures = Image.fromarray(edges_compared.astype('uint8') * 255)
+        pictures = Image.fromarray(slice)
         pictures.save('%02d.png' % i)
         print(str(i + 1) + "/" + str(len(stack)) + " files created")
 
 
-def membrane_tif_stack():
-    """
-    - creating membrane tif stack for future usage in function membrane_consecutive
-    - transpose function is needed for the correct 3D arrangement of the tif image stack
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-    list_for_array = []
+def png_to_tif(input, output, name):
 
-    for i, slice in enumerate(stack):
-        edges_compared = edges(slice)
-        edges_as_array = edges_compared.astype(int)
-        list_for_array.append(edges_as_array)
-
-    three_dim_array = np.dstack(list_for_array)
-    three_dim_array = three_dim_array.transpose(2, 0, 1)
-    membrane_to_tif = three_dim_array.astype('uint8') * 255
-    tifsave('membrane-training-b.tif', membrane_to_tif)
-    print('membrane-training-b.tif created')
-
-
-def em_rgb():
-    """
-    - consecutive images are required for training with overlap images
-    - picture i and picture i+1 are added to the red and green channel
-    - transpose function is needed for the correct 3D arrangement of the .tif image stack
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-    stack1 = stack[:-2]
-    stack2 = stack[1:-1]
-    stack3 = stack[2:]
-
-    for i, (slice1, slice2, slice3) in enumerate(zip(stack1, stack2, stack3)):
-        zero_array = np.zeros((3, 512, 512))
-        zero_array[0] = slice1
-        zero_array[1] = slice2
-        zero_array[2] = slice3
-        zero_array = np.ascontiguousarray(zero_array.transpose(1, 2, 0))
-        consecutive_image = zero_array.astype('uint8')
-        pictures = Image.fromarray(consecutive_image, 'RGB')
-        pictures.save(str(i+1) + '.png')
-        zero_array[0] = 0
-        zero_array[1] = 0
-        zero_array[2] = 0
-        print(str(i + 1) + "/" + str(len(stack1)) + " files created")
-
-
-def preprocessing_overlap_input():
-    """
-    function to create a tif stack from training1 output images (easy to process for "def consecutive membrane"),
-    that are necessary to create consecutive images for the following training2
-    NOTE: argument input_dir needs a "/" after directory name for glob.glob
-    """
     image_names = []
     image_read = []
-    directory = glob.glob(a.input_dir + '*.png')
 
-    for file in directory:
+    for file in input:
         image_names.append(file)
     for image in image_names:
         image_read.append(imread(image))
@@ -291,90 +195,61 @@ def preprocessing_overlap_input():
     #except:
     #    array_dim_red = array[:, :, :]
 
-    os.chdir(a.output_dir)
-    tifsave('cytoplasm_d_pred.tif', array)
-    print('cytoplasm_predicted_for_overlap_c.tif created')
-
-
-def cytoplasma():
-    """
-    - creating cytoplasma images for the cytoplasma prediction
-    """
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-
-    for i, slice in enumerate(stack):
-        edges_compared = edges(slice)
-        cytoplasma_logical = np.logical_and(np.logical_not(edges_compared), slice > 0)
-        pictures = Image.fromarray(cytoplasma_logical.astype('uint8') * 255)
-        pictures.save('%02d.png' % i)
-        print(str(i + 1) + "/" + str(len(stack)) + " files created")
-
-
-def dilation():
-    stack = tifread(a.input_dir)
-    os.chdir(a.output_dir)
-    liste = []
-
-    for i, slice in enumerate(stack):
-        edges_dilated = ndimage.generic_filter(slice, function=max, size=(3, 3))
-        liste.append(edges_dilated)
-
-    array = np.asarray(liste)
-    tifsave('relabel_dilation_slice.tif', array)
-    print('relabel_dilation_slice.tif created')
+    os.chdir(output)
+    tifsave(str(name + '.tif'), array)
+    print(str(name) + '.tif created')
 
 
 def main():
 
-    if not os.path.exists(a.output_dir):
-        os.makedirs(a.output_dir)
+    output = a.output_dir
 
+    'creating folder if new output path is selected'
+    if not os.path.exists(output):
+        os.makedirs(output)
+
+    'splitting the original dataset in four parts with same size'
     if a.operation == 'split':
         prefix = a.split
-        split_snemi3d(prefix)
+        input = a.input_dir
+        if prefix == 'None':
+            raise NameError('no prefix selected, please use whether "em" or "label" to specify your intention')
+        split_snemi3d(input, output, prefix)
 
-    if a.operation == 'create_em':
-        em()
+    'create cytoplasm images'
+    if a.operation == 'cytoplasm':
+        input = a.input_dir
+        cytoplasm(input, output)
 
-    if a.operation == 'create_overlap':
-        overlap()
+    'create membrane images'
+    if a.operation == 'membrane':
+        input = a.input_dir
+        membrane(input, output)
 
-    if a.operation == 'create_rgb':
-        em_rgb()
+    'create overlap images'
+    if a.operation == 'overlap':
+        input = a.input_dir
+        overlap(input, output)
 
-    if a.operation == 'create_consecutive':
-        consecutive()
+    'create consecutive images'
+    if a.operation == 'consecutive':
+        input = a.input_dir
+        consecutive(input, output, a.size)
 
-    if a.operation == 'create_membrane':
-        membrane_single_pictures()
+    'tenfold erosion and following skeletonization of overlap images'
+    if a.operation == 'eroskele':
+        input = glob.glob(os.path.join(a.input_dir, '*.png'))
+        eroskele(input, output)
 
-    if a.operation == 'create_membrane_tif':
-        membrane_tif_stack()
+    'converting a tif to pngs'
+    if a.operation == 'tif_to_png':
+        input = a.input_dir
+        tif_to_png(input, output)
 
-    if a.operation == 'create_cytoplasma':
-        cytoplasma()
-
-    if a.operation == 'preprocessing':
-        preprocessing_overlap_input()
-
-    if a.operation == 'preprocessing_membrane':
-        membrane_single_pictures2()
-
-    if a.operation == 'dilation':
-        dilation()
-
-    if a.operation == 'cutten':
-        cutten()
-
-    if a.operation == 'cutten2':
-        cutten2()
-
-    if a.operation == 'single':
-        single()
-
-    if a.operation == 'erosion':
-        erosion()
+    'converting pngs to a tif'
+    if a.operation == 'png_to_tif':
+        input = glob.glob(a.input_dir + '*outputs.png')
+        png_to_tif(input, output, a.name)
 
 
 main()
