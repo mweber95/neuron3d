@@ -3,9 +3,9 @@
 *Note:* This repository is a subproject of https://github.com/tbullmann/heuhaufen.
 
 ### Prerequisites
-- Windows, Linux or OSX (following getting started guide for unix users)
+- Windows, Linux or OSX (following getting started guide for Linux users)
 - Python3
-- CPU or NVIDIA GPU + CUDA CuDNN (for instructions see here https://github.com/tbullmann/heuhaufen/blob/master/CONDA.md)
+- CPU or NVIDIA GPU + CUDA CuDNN
 
 ### Requirements
 - Argparse 1.4.0 
@@ -17,15 +17,38 @@
 - Neuroglancer 1.0.11 (https://github.com/google/neuroglancer)
 
 - Tornado 4.5.3 (*Note:* Make sure you installed the specified version for Tornado)
+- Tensorflow 1.12.0 
 
-## SNEMI3D dataset
+##Getting started
 
-The SNEMI3D dataset was published in the context of the IEEE International Symposium on Biomedical Imaging (San Francisco, CA, April 7-11th 2013). The dataset can be downloaded after registration on http://brainiac2.mit.edu/SNEMI3D/home. Additionally, 4 pre-processed TIF files are available under https://doi.org/10.5281/zenodo.3371325 and serve just for evaluating the output of machine learning algorithms.
+-Create a new environment and install all requirements
+(*Note:* for more in depth instructions see https://github.com/tbullmann/heuhaufen/blob/master/CONDA.md)
 
-## Pre-processing the dataset for training
+-Clone this repository
 
-As illustrated in following Figure ....
+```bash
+git clone https://github.com/mweber95/neuron3d.git
+```
 
-![Result](documentation/part.png)
+- Clone other repositories used for computation and visualization
 
-test
+```bash
+git clone https://github.com/tbullmann/imagetranslation-tensorflow.git
+```
+
+- Symlink repositories
+
+```bash
+cd neuron3d
+ln -s ../imagetranslation-tensorflow/ imagetranslation (command for Linux)
+```
+
+- Create directory
+
+```bash
+mkdir datasets
+```
+
+- Place the following .tif files in the *datasets* folder
+- Download the SNEMI3D dataset from http://brainiac2.mit.edu/SNEMI3D/home
+- Download evaluation tif files from https://doi.org/10.5281/zenodo.3371325
