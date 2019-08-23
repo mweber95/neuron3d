@@ -15,11 +15,10 @@
 - Imageio 2.4.1
 - Skimage 0.14.2
 - Neuroglancer 1.0.11 (https://github.com/google/neuroglancer)
-
 - Tornado 4.5.3 (*Note:* Make sure you installed the specified version for Tornado)
 - Tensorflow 1.12.0 
 
-##Getting started
+## Getting started
 
 -Create a new environment and install all requirements
 (*Note:* for more in depth instructions see https://github.com/tbullmann/heuhaufen/blob/master/CONDA.md)
@@ -57,7 +56,7 @@ mkdir datasets
 
 ![workflow](documentation/full_workflow.png)
 
-The major goal of this thesis was to combine machine learning and deterministic algorithms
+The major goal of this work was to combine machine learning and deterministic algorithms
 for a dense reconstruction of three dimensional objects such as neurons from a
 series of EM images. In particular, my workflow combined established 2D CNNs suited
 for image prediction with the classic connected components algorithm. Cytoplasm images
